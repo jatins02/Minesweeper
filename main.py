@@ -1,6 +1,7 @@
 import pygame
 import random
 import math
+import time
 pygame.font.init()
 
 
@@ -10,10 +11,13 @@ WHITE = (255, 255, 255)
 LAVENDERBLUSH = (255, 240, 245)
 ORANGE = (255, 165, 0)
 RED = (255, 0, 0)
+TILE_COLOR = (175, 207, 147)
+FLIPPED_COLOR = (75, 82, 77)
+SETUP_BACKGROUND = (71, 83, 89)
 
 # WINDOW SPECIFICATIONS:
 WIDTH, HEIGHT = 440, 440
-FPS = 4
+FPS = 44
 
 #WINDOW INITIALISATION:
 WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -50,7 +54,6 @@ def main():
             elif not setting_up:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     running = handle_main_click(event, grid_dict, grid_array)
-                
 
         if setting_up:
             easy_rect, mid_rect, hard_rect = set_up()
@@ -66,16 +69,16 @@ def set_up():       #makes the setting window
     setting_label_height = 44
     top_padding = 18
 
-    WINDOW.fill(LAVENDERBLUSH)
+    WINDOW.fill(SETUP_BACKGROUND)
 
-    label = pygame.Rect(0, 22, WIDTH, label_height)
-    font = pygame.font.SysFont("monospace", 55, True)
-    text = font.render("MINESWEEPER", 1, BLACK)
+    label = pygame.Rect(0, 69, WIDTH, label_height)
+    my_font = pygame.font.Font("F:/FONTS_/PressStart2P-Regular.ttf", 36)
+    text = my_font.render("MINESWEEPER", 1, BLACK)
     WINDOW.blit(text, (WIDTH//2 - text.get_width()//2, label.y))
 
-    setting_font = pygame.font.SysFont("helvetica", 36)
+    setting_font = pygame.font.Font("F:/FONTS_/PressStart2P-Regular.ttf", 28)
 
-    easy_rect = pygame.Rect(0, top_margin + label_height + top_padding, WIDTH, setting_label_height)
+    easy_rect = pygame.Rect(0, top_margin + label_height + top_padding + 44, WIDTH, setting_label_height)
     easy_surface = setting_font.render("EASY", 1, ORANGE)
     WINDOW.blit(easy_surface, (WIDTH//2 - easy_surface.get_width()//2, easy_rect.y))
 
@@ -102,11 +105,11 @@ def handle_setup_click(event, easy_rect, mid_rect, hard_rect):      #handles lef
         return [True, None]
 
 
-def initGame(difficulty):       #initialises game by setting up important parameters
+def initGame(difficulty):                                           #initialises game by setting up important parameters
     num_rows = {"easy": 8, "mid": 10, "hard": 12}
 
     total_tiles = num_rows[difficulty] ** 2
-    num_of_bombs = {64: 7, 100: 10, 144: 15}        #keys is number of tiles and value is number of bombs in the grid.
+    num_of_bombs = {64: 7, 100: 10, 144: 15}                        #keys is number of tiles and value is number of bombs in the grid.
     bomb_indices = []
 
     while len(bomb_indices) < num_of_bombs[total_tiles]:
@@ -119,10 +122,10 @@ def initGame(difficulty):       #initialises game by setting up important parame
     return [bomb_indices, num_rows[difficulty]]
 
 
-def draw_game_grid(num_rows):       #draw the game grid
-    WINDOW.fill(LAVENDERBLUSH)
+def draw_game_grid(num_rows):
+    WINDOW.fill((60, 60, 60))
 
-    tile_side = {8: 44, 10: 35, 12: 30}         # key = number of rows in the grid, value = length of one side of the tile
+    tile_side = {8: 44, 10: 36, 12: 31}         # key = number of rows in the grid, value = length of one side of the tile
     padding = {8: 10, 10: 7, 12: 5}             # key = number of rows in the grid, value = padding around each tile.
 
     for row in range(num_rows):
@@ -132,20 +135,20 @@ def draw_game_grid(num_rows):       #draw the game grid
             top = (row * tile_side[num_rows]) + padding[num_rows] * (row + 1)
             tile = pygame.Rect(left, top, tile_side[num_rows], tile_side[num_rows])
             row_array.append(tile)
-            pygame.draw.rect(WINDOW, RED, tile)
+            pygame.draw.rect(WINDOW, TILE_COLOR, tile)
         grid_array.append(row_array)
 
     return grid_array
 
 
 def fill_grid(num_rows, bomb_indices):      #fills grid with numbers and bombs
-    grid_dict = {}      # will store the coordinate of each tile along with its associated value (bomb/number).
+    grid_dict = {}                          # will store the coordinate of each tile along with its associated value (bomb/number).
 
     counter = 0
-    for row in range(num_rows):     #loop to initialise grid_dict 
+    for row in range(num_rows):             #loop to initialise grid_dict 
         for column in range(num_rows):
             flip_state[(row, column)] = "hidden"
-            if (row * num_rows) + column in bomb_indices:               ##replaced counter with row*num_rows + column
+            if (row * num_rows) + column in bomb_indices:               #replaced counter with row*num_rows + column
                 grid_dict[(row, column)] = "X"
             else:
                 grid_dict[(row, column)] = 0
@@ -187,27 +190,49 @@ def handle_main_click(event, grid_dict, grid_array):        #handles clicks on t
 
                 if grid_dict[clicked_tile_coord] != 0:              #meaning it is a bomb, or a number
                     if grid_dict[clicked_tile_coord] == "X":        #tile is a bomb
-                        #end_game()                                 #call function to finish the game, player loses
-                        print("game lost")
                         flip_tile(grid_dict, clicked_tile_coord, tile)
+                        end_lost()  
+                        pygame.display.update()
+                        time.sleep(3)                                                             
                         flip_state[clicked_tile_coord] = "revealed"
-                        print("bomb tile was clicked")
                         return False
                     else:
-                        print("number tile was clicked")
                         flip_tile(grid_dict, clicked_tile_coord, tile)      #tile is a number, just simply flip it
                         flip_state[clicked_tile_coord] = "revealed"
+                        if check_game_won(grid_dict, flip_state):
+                            return False
                         return True
                 else:
-                    print("zero tile is clicked")
                     surrounding_tiles = get_surrounding_tiles(clicked_tile_coord, grid_dict)
                     zero_clicked(clicked_tile_coord, surrounding_tiles, grid_dict, flip_state)
                     flip_state[clicked_tile_coord] = "revealed"
                     return True
-                
+
             column_count += 1
         row_count += 1
+    return True
 
+
+def end_lost():
+    end_rect = pygame.Rect(0, HEIGHT//2 - 75, WIDTH, 150)
+    end_font = pygame.font.Font("F:/FONTS_/PressStart2P-Regular.ttf", 44)
+    text = end_font.render("GAME ENDED", 1, LAVENDERBLUSH)
+    WINDOW.blit(text, (WIDTH//2 - text.get_width()//2, end_rect.y))
+
+
+def check_game_won(grid_dict, flip_state):
+    for coord, content in grid_dict.items():
+        if content != "X" and flip_state[coord] == "hidden":
+            return False
+            
+    end_rect = pygame.Rect(0, HEIGHT//2 - 75, WIDTH, 150)
+    end_font = pygame.font.Font("F:/FONTS_/PressStart2P-Regular.ttf", 44)
+    text = end_font.render("GAME WON", 1, ORANGE)
+    WINDOW.blit(text, (WIDTH//2 - text.get_width()//2, end_rect.y))
+    pygame.display.update()
+    time.sleep(3)
+    return True
+    
 
 def zero_clicked(clicked_tile_coord, surrounding_tiles, grid_dict, flip_state):     #handles if player clicked on a tile with 0
     if flip_state[clicked_tile_coord] == "revealed":
@@ -233,14 +258,21 @@ def get_dist(tup1, tup2):
 
 
 def flip_tile(grid_dict, coord, rect):
+    TILE_FONT_COLOR = (44, 44, 44)
+    ZERO_FONT_COLOR = (180, 220, 169)
     bombFont = pygame.font.SysFont("monospace", 20, True)
-    bombFont_surface = bombFont.render("X", 1, BLACK)
+    bombFont_surface = bombFont.render("X", 1, TILE_FONT_COLOR)
 
     numFont = pygame.font.SysFont("monospace", 22, True)
+
+    pygame.draw.rect(WINDOW, FLIPPED_COLOR, rect)
     
     if flip_state[coord] != "revealed":
         if type(grid_dict[coord]) == int:
-            text = numFont.render(f"{grid_dict[coord]}", 1, BLACK)
+            if grid_dict[coord] == 0:
+                text = numFont.render(f"{grid_dict[coord]}", 1, ZERO_FONT_COLOR)
+            else:
+                text = numFont.render(f"{grid_dict[coord]}", 1, TILE_FONT_COLOR)
             WINDOW.blit(text, (rect.x, rect.y))
         else:
             WINDOW.blit(bombFont_surface, (rect.x, rect.y))
@@ -256,7 +288,7 @@ def get_surrounding_tiles(clicked_tile_coord, grid_dict):
 
 
 #Misc. Function
-def init_grid(grid_dict):       #function not in use, but it will initialise the grid with all tiles revealed
+def init_grid(grid_dict):                                   #function not in use, but it will initialise the grid with all tiles revealed
     bombFont = pygame.font.SysFont("monospace", 20, True)
     bombFont_surface = bombFont.render("X", 1, BLACK)
 
@@ -264,10 +296,10 @@ def init_grid(grid_dict):       #function not in use, but it will initialise the
 
     for tile in grid_dict.keys():
         current_tile = grid_array[tile[0]][tile[1]]
-        if type(grid_dict[tile]) == str:    #tile contains a bomb
+        if type(grid_dict[tile]) == str:                    #tile contains a bomb
             WINDOW.blit(bombFont_surface, (current_tile.x, current_tile.y))
 
-        else:   # tile does not contain a bomb, it corresponds to a number
+        else:                                               # tile does not contain a bomb, it corresponds to a number
             numFont_surface = numFont.render(f"{grid_dict[tile]}", 1, True)
             WINDOW.blit(numFont_surface, (current_tile.x, current_tile.y))
             
