@@ -1,2 +1,2 @@
-minesweeper, made in pygame.
-cleaning up the interface and code cleaning, pending...
+Minesweeper, made in pygame.
+
